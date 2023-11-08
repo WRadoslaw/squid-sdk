@@ -138,7 +138,7 @@ export class ConnectionQuery implements Query<RelayConnectionResponse> {
             if (idField) {
                 wherePrinter = new EntitySqlPrinter(model, dialect, typeName, this.params, args, [idField])
             }
-            printer = new EntitySqlPrinter(model, dialect, typeName, this.params, idField ? {orderBy: req.orderBy} : args, req.edgeNode)
+            printer = new EntitySqlPrinter(model, dialect, typeName, this.params, idField ? {} : args, req.edgeNode)
         } else {
             assert(req.edgeNode == null || !Array.isArray(req.edgeNode))
             printer = new QueryableSqlPrinter(model, dialect, typeName, this.params, args, req.edgeNode)
@@ -147,9 +147,7 @@ export class ConnectionQuery implements Query<RelayConnectionResponse> {
         if (req.edgeNode) {
             this.edgeNode = req.edgeNode
             if (wherePrinter) {
-                const mainPrinter = printer.print().split('ORDER BY')
-                mainPrinter[0] = `${mainPrinter[0]} WHERE "${toTable(typeName)}"."id" IN (${wherePrinter.print()})`
-                this.sql = mainPrinter.join(' ORDER BY')
+                this.sql = `WITH id_list AS (${wherePrinter.print()}) ${printer.print()} JOIN id_list ON "${toTable(typeName)}"."id" = id_list._c0;`
             }else {
                 this.sql = printer.print()
             }
