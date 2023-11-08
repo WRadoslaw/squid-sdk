@@ -12,7 +12,7 @@ import {
 } from '../ir/connection'
 import type {AnyFields, FieldRequest} from '../ir/fields'
 import type {Model} from '../model'
-import {toSafeInteger} from '../util/util'
+import {toSafeInteger, toTable} from '../util/util'
 import {mapQueryableRows, mapRows} from './mapping'
 import {EntitySqlPrinter, QueryableSqlPrinter} from './printer'
 
@@ -131,9 +131,14 @@ export class ConnectionQuery implements Query<RelayConnectionResponse> {
         }
 
         let printer
+        let wherePrinter
         if (model[typeName].kind == 'entity') {
             assert(req.edgeNode == null || Array.isArray(req.edgeNode))
-            printer = new EntitySqlPrinter(model, dialect, typeName, this.params, args, req.edgeNode)
+            const idField = req.edgeNode?.find(eN => eN.field === 'id')
+            if (idField) {
+                wherePrinter = new EntitySqlPrinter(model, dialect, typeName, this.params, args, [idField])
+            }
+            printer = new EntitySqlPrinter(model, dialect, typeName, this.params, idField ? {orderBy: req.orderBy} : args, req.edgeNode)
         } else {
             assert(req.edgeNode == null || !Array.isArray(req.edgeNode))
             printer = new QueryableSqlPrinter(model, dialect, typeName, this.params, args, req.edgeNode)
@@ -141,7 +146,13 @@ export class ConnectionQuery implements Query<RelayConnectionResponse> {
 
         if (req.edgeNode) {
             this.edgeNode = req.edgeNode
-            this.sql = printer.print()
+            if (wherePrinter) {
+                const mainPrinter = printer.print().split('ORDER BY')
+                mainPrinter[0] = `${mainPrinter[0]} WHERE "${toTable(typeName)}"."id" IN (${wherePrinter.print()})`
+                this.sql = mainPrinter.join(' ORDER BY')
+            }else {
+                this.sql = printer.print()
+            }
         } else {
             this.sql = printer.printAsCount()
         }
