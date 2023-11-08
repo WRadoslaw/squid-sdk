@@ -93,28 +93,64 @@ describe('relay connections', function () {
         })
     })
 
-    it('pagination without nodes', function () {
+    it('with where', function () {
         return client.test(`
-            query { 
-                page1: lettersConnection(orderBy: id_ASC, first: 3) {
+            query {
+                page1: lettersConnection(orderBy: id_ASC, first: 3, where: { id_eq: "a"}) {
                     ...fields
-                } 
-                page2: lettersConnection(orderBy: id_ASC, first: 3, after: "3") {
-                    ...fields
-                } 
-                page3: lettersConnection(orderBy: id_ASC, first: 3, after: "6") {
-                    ...fields
-                } 
+                }
             }
             fragment fields on LettersConnection {
-                edges { 
+                edges {
+                    node { id }
                     cursor
                 }
-                pageInfo { 
-                    hasNextPage 
-                    hasPreviousPage 
-                    startCursor 
-                    endCursor 
+                pageInfo {
+                    hasNextPage
+                    hasPreviousPage
+                    startCursor
+                    endCursor
+                }
+                totalCount
+            }
+        `, {
+            page1: {
+                edges: [
+                    {node: {id: 'a'}, cursor: '1'},
+                ],
+                pageInfo: {
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                    startCursor: '1',
+                    endCursor: '1'
+                },
+                totalCount: 1
+            },
+        })
+    })
+
+    it('pagination without nodes', function () {
+        return client.test(`
+            query {
+                page1: lettersConnection(orderBy: id_ASC, first: 3) {
+                    ...fields
+                }
+                page2: lettersConnection(orderBy: id_ASC, first: 3, after: "3") {
+                    ...fields
+                }
+                page3: lettersConnection(orderBy: id_ASC, first: 3, after: "6") {
+                    ...fields
+                }
+            }
+            fragment fields on LettersConnection {
+                edges {
+                    cursor
+                }
+                pageInfo {
+                    hasNextPage
+                    hasPreviousPage
+                    startCursor
+                    endCursor
                 }
                 totalCount
             }
@@ -166,15 +202,15 @@ describe('relay connections', function () {
         return client.test(`
             query {
                 emptiesConnection(orderBy: id_ASC) {
-                    edges { 
-                        node { id } 
+                    edges {
+                        node { id }
                         cursor
                     }
-                    pageInfo { 
-                        hasNextPage 
-                        hasPreviousPage 
-                        startCursor 
-                        endCursor 
+                    pageInfo {
+                        hasNextPage
+                        hasPreviousPage
+                        startCursor
+                        endCursor
                     }
                     totalCount
                 }
